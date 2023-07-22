@@ -1,0 +1,9 @@
+version: "3.3"
+services:
+  oda-cc-fashion-advisor-service:
+    build: .
+    image: "oda-cc-fashion-advisor-service:1.0"
+    container_name: "oda-cc-fashion-advisor-service"
+    command: "npm start"
+    ports:
+      - 3000:3000       
