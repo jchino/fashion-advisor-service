@@ -84,6 +84,7 @@ npm run bots-node-sdk -- pack .
 options.
 
 Run the following commands to deploy to docker and start the container:
+
 ```shell
 npm run-script docker-build
 docker-compose up

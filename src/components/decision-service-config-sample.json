@@ -1,0 +1,8 @@
+{
+  "tokenUrl": "https://${IDCSのホスト名}/oauth2/v1/token",
+  "clientId": "OPAのIDCSアプリケーションのClient ID",
+  "clientSecret": "OPAのIDCSアプリケーションのClient Secret",
+  "scope": "https://${OPAのホスト名}/decision",
+  "decisionServiceUrl": "https://${OPAのホスト名}/decision/api/v1/decision-models/${プロセス・アプリケーションの名前}/versions/${プロセス・アプリケーションのバージョン}/active/definition/decision-services/${デシジョン・サービス名}"
+}
+
