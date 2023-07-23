@@ -3,3 +3,4 @@ build
 service-*
 package/
 *.tgz
+src/**/*-config.json
