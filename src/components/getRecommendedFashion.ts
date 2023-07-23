@@ -29,18 +29,22 @@ export class GetRecommendedFashion implements CustomComponent {
       // 2. Decision Model Service をコールする
       const temperature = 30;
       const precipitation = 40;
-      const goal = "海";
-      const gender = "男の子";
-      const recommendation = await this.getRecommendation(accessToken['access_token'], temperature, precipitation, goal, gender);
+      const goal = '海';
+      const gender = '男の子';
+      const recommendation = await this.getRecommendation(
+        accessToken['access_token'],
+        temperature,
+        precipitation,
+        goal,
+        gender,
+      );
       if (!recommendation['problems']) {
         console.log(JSON.stringify(recommendation['interpretation']));
-      }
-      else {
+      } else {
         console.error('問題発生');
         console.log(JSON.stringify(recommendation['problems'], null, 2));
       }
-    }
-    catch (error) {
+    } catch (error) {
       console.error(error);
     }
     context.transition('success');
@@ -63,22 +67,26 @@ export class GetRecommendedFashion implements CustomComponent {
     try {
       const res = await fetch(tokenUrl, {
         method: 'POST',
-        headers: {'Authorization': `Basic ${auth}`},
-        body: params
+        headers: { Authorization: `Basic ${auth}` },
+        body: params,
       });
       if (res.ok) {
         return await res.json();
-      }
-      else {
+      } else {
         throw new Error(res.statusText);
       }
-    }
-    catch (error) {
+    } catch (error) {
       throw new Error();
     }
   }
 
-  protected async getRecommendation(accessToken: string, temperature: number, precipitation: number, goal: string, gender: string): Promise<any> {
+  protected async getRecommendation(
+    accessToken: string,
+    temperature: number,
+    precipitation: number,
+    goal: string,
+    gender: string,
+  ): Promise<any> {
     const serviceUrl = CONFIG.decisionServiceUrl;
     // Request Body
     const requestBody = new FashionAdviserServiceRequest(temperature, precipitation, goal, gender);
@@ -87,16 +95,14 @@ export class GetRecommendedFashion implements CustomComponent {
       const response = await fetch(serviceUrl, {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: requestBody.generateRequestBody()
+        body: requestBody.generateRequestBody(),
       });
       if (response.ok) {
         return await response.json();
-      }
-      else {
+      } else {
         throw new Error(response.statusText);
       }
-    }
-    catch (error) {
+    } catch (error) {
       throw new Error();
     }
   }
@@ -121,8 +127,8 @@ class FashionAdviserServiceRequest {
         Temperature: this.temperature,
         Precipitation: this.precipitation,
         Goal: this.goal,
-        Gender: this.gender
-      }
+        Gender: this.gender,
+      },
     };
     return JSON.stringify(body);
   }
