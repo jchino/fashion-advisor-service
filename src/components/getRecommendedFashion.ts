@@ -12,10 +12,12 @@ export class GetRecommendedFashion implements CustomComponent {
     return {
       name: 'getRecommendedFashion',
       properties: {
-        // temperature: { required: true, type: 'string' }, // 気温 (摂氏)
-        // precipitation: { required: true, type: 'string' }, // 降水確率 (0〜100)
+        // departure: { required: true, type: 'string' }, // いつ行くのか (yyyy-MM-dd を想定)
+        // destination: { required: true, type: 'string' }, // 行き先 (東京 or 大阪 or 北海道 or 沖縄)
         // goal: { required: true, type: 'string' }, // 目的地 (海 or 山 or 遊園地 or カフェ)
-        // gender: { required: true, type: 'string' }, // 性別 (男の子 or 女の子)
+        // gender: { required: true, type: 'string' }, // 性別 (男性 or 女性)
+        // generation: { required: false, type: 'string' }, // 世代 (10代 or 20代〜30代 or 40代以上)
+        // situation: { required: false, type: 'string' }, // 誰と行くか (友達 or 家族 or 恋人)
       },
       supportedActions: ['success', 'status4xx', 'status5xx'],
     };
@@ -27,16 +29,22 @@ export class GetRecommendedFashion implements CustomComponent {
       const accessToken = await this.getAccessToken();
 
       // 2. Decision Model Service をコールする
-      const temperature = 30;
-      const precipitation = 40;
+      // TODO: コンポーネントのパラメータを使用するようにあとで置き換える
+      const departure = new Date();
+      const destination = '東京';
       const goal = '海';
-      const gender = '男の子';
+      const gender = '男性';
+      const generation = '40代以上';
+      const situation = '家族';
+
       const recommendation = await this.getRecommendation(
         accessToken['access_token'],
-        temperature,
-        precipitation,
+        departure,
+        destination,
         goal,
         gender,
+        generation,
+        situation,
       );
       if (!recommendation['problems']) {
         console.log(JSON.stringify(recommendation['interpretation']));
@@ -50,6 +58,13 @@ export class GetRecommendedFashion implements CustomComponent {
     context.transition('success');
   }
 
+  /**
+   * Oracle Identity Cloud Service (IDCS) から Client Credential Grant の OAuth2 トークンを取得する。
+   * 取得した OAuth2 トークンは、OPA の Decision Service の API をコールするために必要
+   *
+   * @see https://docs.oracle.com/en/cloud/paas/identity-cloud/rest-api/op-oauth2-v1-token-post.html
+   * @returns Promise<any>
+   */
   protected async getAccessToken(): Promise<any> {
     const tokenUrl = CONFIG.tokenUrl;
     const clientId = CONFIG.clientId;
@@ -80,22 +95,36 @@ export class GetRecommendedFashion implements CustomComponent {
     }
   }
 
+  /**
+   * OPA Decision Service の REST API をコールして、行き先や目的などに合わせたおすすめのファッションを取得
+   *
+   * @see https://docs.oracle.com/en/cloud/paas/process-automation/user-process-automation/call-decision-service.html#GUID-76B3C6D4-1A24-4D4F-BE84-E3C095CF37A9
+   * @param accessToken {string} OAuth2 のアクセス・トークン
+   * @param departure {Date} 外出する日
+   * @param destination {string} 外出先 (東京 or 大阪 or 北海道 or 沖縄)
+   * @param goal {string} 目的 (海 or 山 or 遊園地 or )
+   * @param gender {string} 性別 (男性 or 女性)
+   * @param generation {string} 世代 (10代 or 20代〜30代 or 40代)
+   * @param situation {string} シチュエーション（一緒に出かける相手） (友達 or 家族 or 恋人)
+   * @returns Promise<any>
+   */
   protected async getRecommendation(
     accessToken: string,
-    temperature: number,
-    precipitation: number,
+    departure: Date,
+    destination: string,
     goal: string,
     gender: string,
+    generation: string = '10代',
+    situation: string = '友達',
   ): Promise<any> {
     const serviceUrl = CONFIG.decisionServiceUrl;
-    // Request Body
-    const requestBody = new FashionAdviserServiceRequest(temperature, precipitation, goal, gender);
+    const requestBody = new FashionAdviserServiceRequest(departure, destination, goal, gender, generation, situation);
     try {
-      console.log(requestBody.generateRequestBody());
+      console.log(requestBody.getRequestBodyValue());
       const response = await fetch(serviceUrl, {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: requestBody.generateRequestBody(),
+        body: requestBody.getRequestBodyValue(),
       });
       if (response.ok) {
         return await response.json();
@@ -108,26 +137,42 @@ export class GetRecommendedFashion implements CustomComponent {
   }
 }
 
+/**
+ * Decision Service の入力パラメータを生成
+ */
 class FashionAdviserServiceRequest {
-  protected temperature: number;
-  protected precipitation: number;
+  protected departure: Date;
+  protected destination: string;
   protected goal: string;
   protected gender: string;
+  protected generation: string;
+  protected situation: string;
 
-  constructor(temperature: number, precipitation: number, goal: string, gender: string) {
-    this.temperature = temperature;
-    this.precipitation = precipitation;
+  constructor(
+    departure: Date,
+    destination: string,
+    goal: string,
+    gender: string,
+    generation: string,
+    situation: string,
+  ) {
+    this.departure = departure;
+    this.destination = destination;
     this.goal = goal;
     this.gender = gender;
+    this.generation = generation;
+    this.situation = situation;
   }
 
-  public generateRequestBody(): string {
+  public getRequestBodyValue(): string {
     const body = {
       FashionAdviserInput: {
-        Temperature: this.temperature,
-        Precipitation: this.precipitation,
-        Goal: this.goal,
-        Gender: this.gender,
+        month: this.departure.getMonth() + 1,
+        destination: this.destination,
+        goal: this.goal,
+        gender: this.gender,
+        generation: this.generation,
+        situation: this.situation,
       },
     };
     return JSON.stringify(body);
