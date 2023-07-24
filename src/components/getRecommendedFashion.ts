@@ -2,8 +2,8 @@
  * Oracle Cloud Infrastructure (OCI) Process Automation (OPA) の Decision Service をコールする。
  */
 import { Buffer } from 'buffer';
-import { CustomComponent, CustomComponentMetadata, CustomComponentContext } from '@oracle/bots-node-sdk/lib';
 import { URLSearchParams } from 'url';
+import { CustomComponent, CustomComponentMetadata, CustomComponentContext } from '@oracle/bots-node-sdk/lib';
 import fetch from 'node-fetch';
 import * as CONFIG from './decision-service-config.json';
 
@@ -12,12 +12,12 @@ export class GetRecommendedFashion implements CustomComponent {
     return {
       name: 'getRecommendedFashion',
       properties: {
-        // departure: { required: true, type: 'string' }, // いつ行くのか (yyyy-MM-dd を想定)
-        // destination: { required: true, type: 'string' }, // 行き先 (東京 or 大阪 or 北海道 or 沖縄)
-        // goal: { required: true, type: 'string' }, // 目的地 (海 or 山 or 遊園地 or カフェ)
-        // gender: { required: true, type: 'string' }, // 性別 (男性 or 女性)
-        // generation: { required: false, type: 'string' }, // 世代 (10代 or 20代〜30代 or 40代以上)
-        // situation: { required: false, type: 'string' }, // 誰と行くか (友達 or 家族 or 恋人)
+        departure: { required: true, type: 'string' }, // いつ行くのか yyyy-MM(-dd)
+        destination: { required: true, type: 'string' }, // 行き先 (東京 or 大阪 or 北海道 or 沖縄)
+        goal: { required: true, type: 'string' }, // 目的地 (海 or 山 or 遊園地 or カフェ)
+        gender: { required: true, type: 'string' }, // 性別 (男性 or 女性)
+        generation: { required: false, type: 'string' }, // 世代 (10代 or 20代〜30代 or 40代以上)
+        situation: { required: false, type: 'string' }, // 誰と行くか (友達 or 家族 or 恋人)
       },
       supportedActions: ['success', 'status4xx', 'status5xx'],
     };
@@ -29,22 +29,17 @@ export class GetRecommendedFashion implements CustomComponent {
       const accessToken = await this.getAccessToken();
 
       // 2. Decision Model Service をコールする
-      // TODO: コンポーネントのパラメータを使用するようにあとで置き換える
-      const departure = new Date();
-      const destination = '東京';
-      const goal = '海';
-      const gender = '男性';
-      const generation = '40代以上';
-      const situation = '家族';
-
+      // コンポーネント・プロパティの取得
+      const { departure, destination, goal, gender, generation, situation } = context.properties();
+      // Decision Service API のコール
       const recommendation = await this.getRecommendation(
         accessToken['access_token'],
-        departure,
+        new Date(departure),
         destination,
         goal,
         gender,
-        generation,
-        situation,
+        generation ? generation : '10代',
+        situation ? situation : '友達',
       );
       if (!recommendation['problems']) {
         console.log(JSON.stringify(recommendation['interpretation']));
@@ -114,8 +109,8 @@ export class GetRecommendedFashion implements CustomComponent {
     destination: string,
     goal: string,
     gender: string,
-    generation: string = '10代',
-    situation: string = '友達',
+    generation: string,
+    situation: string,
   ): Promise<any> {
     const serviceUrl = CONFIG.decisionServiceUrl;
     const requestBody = new FashionAdviserServiceRequest(departure, destination, goal, gender, generation, situation);
