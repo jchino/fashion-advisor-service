@@ -12,12 +12,7 @@ export class GetRecommendedFashion implements CustomComponent {
     return {
       name: 'getRecommendedFashion',
       properties: {
-        departure: { required: true, type: 'string' }, // いつ行くのか yyyy-MM(-dd)
-        destination: { required: true, type: 'string' }, // 行き先 (東京 or 大阪 or 北海道 or 沖縄)
-        goal: { required: true, type: 'string' }, // 目的地 (海 or 山 or 遊園地 or カフェ)
-        gender: { required: true, type: 'string' }, // 性別 (男性 or 女性)
-        generation: { required: false, type: 'string' }, // 世代 (10代 or 20代〜30代 or 40代以上)
-        situation: { required: false, type: 'string' }, // 誰と行くか (友達 or 家族 or 恋人)
+        plan: { required: true, type: 'entityVariable' },
       },
       supportedActions: ['success', 'status4xx', 'status5xx'],
     };
@@ -30,20 +25,23 @@ export class GetRecommendedFashion implements CustomComponent {
 
       // 2. Decision Model Service をコールする
       // コンポーネント・プロパティの取得
-      const { departure, destination, goal, gender, generation, situation } = context.properties();
+      const { plan } = context.properties();
+      const planValue = context.getVariable(plan);
       // Decision Service API のコール
       const recommendation = await this.getRecommendation(
         accessToken['access_token'],
-        new Date(departure),
-        destination,
-        goal,
-        gender,
-        generation ? generation : '10代',
-        situation ? situation : '友達',
+        new Date(planValue.departure.value),
+        planValue.destination.value,
+        planValue.goal.value,
+        planValue.gender.value,
+        planValue.generation ? planValue.generation.value : '10代',
+        planValue.situation ? planValue.situation.value : '友達',
       );
       if (!recommendation['problems']) {
+        // TODO: 取得した値をメッセージとして返すか変数に書き込んで他のステートで表示させるか
         console.log(JSON.stringify(recommendation['interpretation']));
       } else {
+        // TODO: 例外処理を書く
         console.error('問題発生');
         console.log(JSON.stringify(recommendation['problems'], null, 2));
       }
