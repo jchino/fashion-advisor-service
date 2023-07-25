@@ -12,9 +12,11 @@ export class GetRecommendedFashion implements CustomComponent {
     return {
       name: 'getRecommendedFashion',
       properties: {
-        plan: { required: true, type: 'entityVariable' },
+        plan: { required: true, type: 'entityVariable' }, // おすすめのファッションを取得するための情報を保持するエンティティ変数の名前
+        recommendation: { required: true, type: 'stringVariable' }, // おすすめのファッションのテキストを保持する変数の名前
+        photo: { required: true, type: 'stringVariable' }, // おすすめのファッションの写真を保持する変数の名前
       },
-      supportedActions: ['success', 'status4xx', 'status5xx'],
+      supportedActions: ['success'],
     };
   }
 
@@ -25,10 +27,10 @@ export class GetRecommendedFashion implements CustomComponent {
 
       // 2. Decision Model Service をコールする
       // コンポーネント・プロパティの取得
-      const { plan } = context.properties();
+      const { plan, recommendation, photo } = context.properties();
       const planValue = context.getVariable(plan);
       // Decision Service API のコール
-      const recommendation = await this.getRecommendation(
+      const decision = await this.getRecommendedFashion(
         accessToken['access_token'],
         new Date(planValue.departure.value),
         planValue.destination.value,
@@ -37,13 +39,14 @@ export class GetRecommendedFashion implements CustomComponent {
         planValue.generation ? planValue.generation.value : '10代',
         planValue.situation ? planValue.situation.value : '友達',
       );
-      if (!recommendation['problems']) {
-        // TODO: 取得した値をメッセージとして返すか変数に書き込んで他のステートで表示させるか
-        console.log(JSON.stringify(recommendation['interpretation']));
+      if (!decision['problems']) {
+        // 取得した値をメッセージをスキルorフロー変数に書き込む
+        context.setVariable(recommendation, decision.interpretation.recommendation);
+        context.setVariable(photo, decision.interpretation.photo);
       } else {
         // TODO: 例外処理を書く
         console.error('問題発生');
-        console.log(JSON.stringify(recommendation['problems'], null, 2));
+        console.error(JSON.stringify(decision['problems']));
       }
     } catch (error) {
       console.error(error);
@@ -101,7 +104,7 @@ export class GetRecommendedFashion implements CustomComponent {
    * @param situation {string} シチュエーション（一緒に出かける相手） (友達 or 家族 or 恋人)
    * @returns Promise<any>
    */
-  protected async getRecommendation(
+  protected async getRecommendedFashion(
     accessToken: string,
     departure: Date,
     destination: string,
